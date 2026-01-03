@@ -1,0 +1,223 @@
+# QUAD Agent Configuration - quad-database
+# ==========================================
+# Database Schema and Migration agent configuration
+#
+# Part of QUAD Framework
+# © 2026 A2Vibe Creators LLC
+
+version: "1.0"
+project: "quad-database"
+type: "database"
+
+# =============================================================================
+# DEFAULT SETTINGS
+# =============================================================================
+
+defaultTimeout: 120000  # Longer timeout for DB operations
+defaultMode: SEQUENTIAL
+
+# =============================================================================
+# INVOCATION METHODS
+# =============================================================================
+
+invocation:
+  ide: true
+  cli: true
+  chat: true
+  auto: true      # For CI/CD migrations
+  mcp: true
+
+# =============================================================================
+# PIPELINES
+# =============================================================================
+
+pipelines:
+  # ---------------------------------------------------------------------------
+  # Schema Development Pipeline
+  # ---------------------------------------------------------------------------
+  schema-development:
+    description: "Develop database schema"
+    version: "1.0.0"
+    mode: SEQUENTIAL
+    steps:
+      - agentId: schema-dev-agent
+        requiredOutput: schema_sql
+        timeout: 60000
+      - agentId: schema-validator-agent
+        requiredOutput: validation_report
+        timeout: 30000
+      - agentId: migration-generator-agent
+        requiredOutput: migration_file
+        timeout: 30000
+
+  # ---------------------------------------------------------------------------
+  # Migration Pipeline
+  # ---------------------------------------------------------------------------
+  migration:
+    description: "Create and apply database migrations"
+    version: "1.0.0"
+    mode: SEQUENTIAL
+    steps:
+      - agentId: migration-generator-agent
+        requiredOutput: migration_file
+        timeout: 30000
+      - agentId: migration-validator-agent
+        requiredOutput: validation_report
+        timeout: 30000
+      - agentId: migration-apply-agent
+        requiredOutput: apply_result
+        timeout: 60000
+        requiresApproval: true  # Human approval before applying
+
+  # ---------------------------------------------------------------------------
+  # Seed Data Pipeline
+  # ---------------------------------------------------------------------------
+  seed-data:
+    description: "Generate and apply seed data"
+    version: "1.0.0"
+    mode: SEQUENTIAL
+    steps:
+      - agentId: seed-generator-agent
+        requiredOutput: seed_sql
+        timeout: 60000
+      - agentId: seed-apply-agent
+        requiredOutput: apply_result
+        timeout: 30000
+
+  # ---------------------------------------------------------------------------
+  # Database Review Pipeline
+  # ---------------------------------------------------------------------------
+  db-review:
+    description: "Review database changes"
+    version: "1.0.0"
+    mode: SEQUENTIAL
+    steps:
+      - agentId: schema-validator-agent
+        requiredOutput: validation_report
+      - agentId: performance-analyzer-agent
+        optional: true
+      - agentId: security-scanner-agent
+        optional: true
+
+# =============================================================================
+# PERMISSIONS
+# =============================================================================
+
+permissions:
+  # Schema Development Agent
+  schema-dev-agent:
+    canRead:
+      - "sql/**"
+      - "migrations/**"
+      - "seed/**"
+    canWrite:
+      - "sql/tables/**"
+      - "sql/functions/**"
+      - "sql/views/**"
+    cannotWrite:
+      - "migrations/**"  # Use migration-generator for this
+    canInvoke:
+      - schema-validator-agent
+      - migration-generator-agent
+
+  # Migration Generator Agent
+  migration-generator-agent:
+    canRead:
+      - "sql/**"
+      - "migrations/**"
+    canWrite:
+      - "migrations/**"
+    canInvoke:
+      - migration-validator-agent
+
+  # Migration Validator Agent
+  migration-validator-agent:
+    canRead:
+      - "sql/**"
+      - "migrations/**"
+    canWrite: []
+    canInvoke: []
+
+  # Migration Apply Agent (REQUIRES APPROVAL)
+  migration-apply-agent:
+    canRead:
+      - "migrations/**"
+    canWrite: []
+    canExecute:
+      - "psql"
+      - "prisma db push"
+    requiresApproval: true
+    canInvoke: []
+
+  # Seed Agents
+  seed-generator-agent:
+    canRead:
+      - "sql/**"
+      - "seed/**"
+    canWrite:
+      - "seed/**"
+    canInvoke:
+      - seed-apply-agent
+
+  seed-apply-agent:
+    canRead:
+      - "seed/**"
+    canWrite: []
+    canExecute:
+      - "psql"
+    canInvoke: []
+
+  # Scanner Agents (read-only)
+  schema-validator-agent:
+    canRead:
+      - "sql/**"
+      - "migrations/**"
+    canWrite: []
+    canInvoke: []
+
+  performance-analyzer-agent:
+    canRead:
+      - "sql/**"
+    canWrite: []
+    canInvoke: []
+
+  security-scanner-agent:
+    canRead:
+      - "sql/**"
+    canWrite: []
+    canInvoke: []
+
+# =============================================================================
+# AUDIT SETTINGS
+# =============================================================================
+
+audit:
+  enabled: true
+  retentionDays: 365  # Keep DB audit logs longer
+  sensitiveFields:
+    - password
+    - secret
+    - credentials
+    - connection_string
+
+# =============================================================================
+# DATABASE SETTINGS
+# =============================================================================
+
+database:
+  type: "PostgreSQL"
+  version: "15+"
+  schema_prefix: "QUAD_"
+
+  environments:
+    dev:
+      host: "localhost"
+      port: 14201
+      database: "quad_dev_db"
+    qa:
+      host: "localhost"
+      port: 15201
+      database: "quad_qa_db"
+    prod:
+      host: "cloud-sql"
+      database: "quad_prod_db"
