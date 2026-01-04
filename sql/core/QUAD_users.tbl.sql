@@ -1,0 +1,31 @@
+-- QUAD_users Table
+-- User accounts with email/password authentication
+--
+-- Part of: QUAD Core
+-- Created: January 2026
+
+CREATE TABLE IF NOT EXISTS quad_users (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id      UUID REFERENCES quad_companies(id) ON DELETE SET NULL,
+    email           VARCHAR(255) NOT NULL UNIQUE,
+    name            VARCHAR(255),
+    avatar_url      VARCHAR(255),
+    department      VARCHAR(255),
+    job_title       VARCHAR(255),
+    github_username VARCHAR(255),
+    slack_user_id   VARCHAR(255),
+    timezone        VARCHAR(255),
+    is_active       BOOLEAN DEFAULT true,
+    is_admin        BOOLEAN DEFAULT false,
+    last_login_at   TIMESTAMP,
+    created_at      TIMESTAMP DEFAULT NOW(),
+    updated_at      TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_quad_users_email ON quad_users(email);
+CREATE INDEX IF NOT EXISTS idx_quad_users_company ON quad_users(company_id);
+CREATE INDEX IF NOT EXISTS idx_quad_users_github ON quad_users(github_username);
+
+-- Comments
+COMMENT ON TABLE quad_users IS 'User accounts with email/password authentication';
