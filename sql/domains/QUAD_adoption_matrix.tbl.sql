@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS "QUAD_adoption_matrix" (
 
     -- Constraints
     CONSTRAINT fk_adoption_user FOREIGN KEY (user_id)
-        REFERENCES "QUAD_users"(id) ON DELETE CASCADE,
+        REFERENCES quad_users(id) ON DELETE CASCADE,
     CONSTRAINT chk_skill_level CHECK (skill_level BETWEEN 1 AND 5),
     CONSTRAINT chk_trust_level CHECK (trust_level BETWEEN 1 AND 5),
     CONSTRAINT chk_autonomy_level CHECK (agent_autonomy_level IN ('supervised', 'semi_autonomous', 'autonomous')),

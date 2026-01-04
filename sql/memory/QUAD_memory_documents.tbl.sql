@@ -14,11 +14,11 @@ CREATE TABLE IF NOT EXISTS QUAD_memory_documents (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
     -- Memory hierarchy (only one should be set)
-    org_id          UUID REFERENCES QUAD_organizations(id) ON DELETE CASCADE,
-    domain_id       UUID REFERENCES QUAD_domains(id) ON DELETE CASCADE,
-    project_id      UUID,  -- Would reference QUAD_projects if exists
-    circle_id       UUID REFERENCES QUAD_circles(id) ON DELETE CASCADE,
-    user_id         UUID REFERENCES QUAD_users(id) ON DELETE CASCADE,
+    org_id          UUID REFERENCES quad_organizations(id) ON DELETE CASCADE,
+    domain_id       UUID REFERENCES quad_domains(id) ON DELETE CASCADE,
+    project_id      UUID,  -- Would reference quad_projects if exists
+    circle_id       UUID REFERENCES quad_circles(id) ON DELETE CASCADE,
+    user_id         UUID REFERENCES quad_users(id) ON DELETE CASCADE,
 
     -- Document metadata
     title           VARCHAR(255) NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS QUAD_memory_documents (
 
     -- Versioning
     version         INTEGER DEFAULT 1,
-    last_editor_id  UUID REFERENCES QUAD_users(id),
+    last_editor_id  UUID REFERENCES quad_users(id),
     edit_reason     VARCHAR(255),
 
     -- Status

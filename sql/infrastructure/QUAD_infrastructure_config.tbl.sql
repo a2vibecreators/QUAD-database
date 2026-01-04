@@ -12,7 +12,7 @@
 
 CREATE TABLE IF NOT EXISTS QUAD_infrastructure_config (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id          UUID NOT NULL UNIQUE REFERENCES QUAD_organizations(id) ON DELETE CASCADE,
+    org_id          UUID NOT NULL UNIQUE REFERENCES quad_organizations(id) ON DELETE CASCADE,
 
     -- ========================================================================
     -- SANDBOX STRATEGY
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS QUAD_infrastructure_config (
     -- ========================================================================
     -- METADATA
     -- ========================================================================
-    configured_by                 UUID REFERENCES QUAD_users(id),
+    configured_by                 UUID REFERENCES quad_users(id),
     configured_at                 TIMESTAMP WITH TIME ZONE,
     last_reviewed_at              TIMESTAMP WITH TIME ZONE,
 

@@ -13,8 +13,8 @@
 
 CREATE TABLE IF NOT EXISTS QUAD_sandbox_usage (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    sandbox_id          UUID NOT NULL REFERENCES QUAD_sandbox_instances(id) ON DELETE CASCADE,
-    org_id              UUID NOT NULL REFERENCES QUAD_organizations(id) ON DELETE CASCADE,
+    sandbox_id          UUID NOT NULL REFERENCES quad_sandbox_instances(id) ON DELETE CASCADE,
+    org_id              UUID NOT NULL REFERENCES quad_organizations(id) ON DELETE CASCADE,
 
     -- ========================================================================
     -- TIMESTAMP

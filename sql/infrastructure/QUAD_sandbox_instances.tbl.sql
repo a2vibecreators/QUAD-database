@@ -11,8 +11,8 @@
 
 CREATE TABLE IF NOT EXISTS QUAD_sandbox_instances (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id              UUID NOT NULL REFERENCES QUAD_organizations(id) ON DELETE CASCADE,
-    domain_id           UUID REFERENCES QUAD_domains(id) ON DELETE SET NULL,
+    org_id              UUID NOT NULL REFERENCES quad_organizations(id) ON DELETE CASCADE,
+    domain_id           UUID REFERENCES quad_domains(id) ON DELETE SET NULL,
 
     -- ========================================================================
     -- SANDBOX MODE & STATUS
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS QUAD_sandbox_instances (
     -- ========================================================================
     -- DEVBOX (Mode 3)
     -- ========================================================================
-    assigned_user_id    UUID REFERENCES QUAD_users(id) ON DELETE SET NULL,
+    assigned_user_id    UUID REFERENCES quad_users(id) ON DELETE SET NULL,
     assigned_user_email VARCHAR(255),
 
     -- ========================================================================
@@ -97,8 +97,8 @@ CREATE TABLE IF NOT EXISTS QUAD_sandbox_instances (
     -- ========================================================================
     -- METADATA
     -- ========================================================================
-    created_by          UUID REFERENCES QUAD_users(id),
-    terminated_by       UUID REFERENCES QUAD_users(id),
+    created_by          UUID REFERENCES quad_users(id),
+    terminated_by       UUID REFERENCES quad_users(id),
     tags                JSONB DEFAULT '{}',         -- Custom tags for filtering
     metadata            JSONB DEFAULT '{}',         -- Provider-specific metadata
 

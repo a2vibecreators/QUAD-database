@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS QUAD_organizations (
     admin_email     VARCHAR(255) NOT NULL,
     description     TEXT,
     size            VARCHAR(50) DEFAULT 'medium',
-    tier_id         UUID REFERENCES QUAD_org_tiers(id) ON DELETE SET NULL,
+    tier_id         UUID, -- Will reference QUAD_org_tiers when created
     path            VARCHAR(500), -- Materialized path: /parent/child/grandchild
     is_active       BOOLEAN DEFAULT true,
 
