@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS QUAD_memory_chunks (
     token_count     INTEGER DEFAULT 0,
 
     -- Embedding vector (for vector search)
-    embedding       VECTOR(1536),  -- OpenAI embedding dimension
+    -- NOTE: Use JSONB for now. Migrate to VECTOR(1536) when pgvector is installed.
+    embedding       JSONB,  -- Array of floats, will be VECTOR(1536) with pgvector
 
     created_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
