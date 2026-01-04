@@ -1,5 +1,5 @@
 -- QUAD Framework Database Schema
--- Modular SQL Schema Loader (127 tables)
+-- Modular SQL Schema Loader (132 tables)
 --
 -- This file loads all individual table files organized by domain.
 -- Run this file to create/update the complete schema.
@@ -7,13 +7,13 @@
 -- Structure:
 --   /sql
 --   ├── schema.sql (this file - loader)
---   ├── core/           - Organizations, Users, Roles (13)
+--   ├── core/           - Organizations, Users, Roles, Rules (14)
 --   ├── domains/        - Domains, Resources, Requirements (10)
 --   ├── tickets/        - Circles, Tickets, Cycles (8)
 --   ├── git/            - Git, PRs, Repositories (6)
 --   ├── meetings/       - Meetings, Calendar Integration (4)
 --   ├── memory/         - QUAD Memory System (8)
---   ├── ai/             - AI Providers, Configs, Credits (16)
+--   ├── ai/             - AI Providers, Configs, Credits, Tracking (19)
 --   ├── infrastructure/ - Sandboxes, Cache, Indexing (9)
 --   ├── skills/         - Skills, Assignments (3)
 --   ├── flows/          - Workflows, Deployments (9)
@@ -22,18 +22,18 @@
 --   ├── analytics/      - Metrics, Rankings, DORA (9)
 --   ├── security/       - Secrets, Runbooks (4)
 --   ├── onboarding/     - Setup, Training (8)
---   └── slack/          - Slack Bot Integration (2)
+--   └── messenger/      - Messenger Channels Integration (3)
 --
--- Total: 127 tables in 16 categories
+-- Total: 132 tables in 16 categories
 --
 -- Created: January 3, 2026
 -- Maintainer: A2Vibe Creators LLC
 
 -- ============================================================================
--- CORE TABLES (Organizations, Users, Roles) - 13 tables
+-- CORE TABLES (Organizations, Users, Roles, Rules) - 14 tables
 -- ============================================================================
 
-\echo '[1/16] Loading Core Tables (13)...'
+\echo '[1/16] Loading Core Tables (14)...'
 \i core/QUAD_org_tiers.tbl.sql
 \i core/QUAD_organizations.tbl.sql
 \i core/QUAD_org_settings.tbl.sql
@@ -47,6 +47,7 @@
 \i core/QUAD_org_members.tbl.sql
 \i core/QUAD_org_invitations.tbl.sql
 \i core/QUAD_config_settings.tbl.sql
+\i core/QUAD_org_rules.tbl.sql
 
 -- ============================================================================
 -- DOMAINS & PROJECTS - 10 tables
@@ -115,10 +116,10 @@
 \i memory/QUAD_memory_update_queue.tbl.sql
 
 -- ============================================================================
--- AI & PROVIDERS - 16 tables
+-- AI & PROVIDERS - 19 tables
 -- ============================================================================
 
-\echo '[7/16] Loading AI Tables (16)...'
+\echo '[7/16] Loading AI Tables (19)...'
 \i ai/QUAD_ai_provider_config.tbl.sql
 \i ai/QUAD_ai_configs.tbl.sql
 \i ai/QUAD_ai_operations.tbl.sql
@@ -135,6 +136,9 @@
 \i ai/QUAD_platform_credit_pool.tbl.sql
 \i ai/QUAD_platform_pool_transactions.tbl.sql
 \i ai/QUAD_rag_indexes.tbl.sql
+\i ai/QUAD_ticket_ai_sessions.tbl.sql
+\i ai/QUAD_ticket_ai_requests.tbl.sql
+\i ai/QUAD_ticket_ai_summary.tbl.sql
 
 -- ============================================================================
 -- INFRASTRUCTURE (Sandboxes, Cache, Indexing) - 9 tables
@@ -245,12 +249,13 @@
 \i onboarding/QUAD_training_completions.tbl.sql
 
 -- ============================================================================
--- SLACK INTEGRATION - 2 tables
+-- MESSENGER CHANNELS - 3 tables (Slack, Teams, Discord, WhatsApp, Email, SMS)
 -- ============================================================================
 
-\echo '[16/16] Loading Slack Tables (2)...'
-\i slack/QUAD_slack_bot_commands.tbl.sql
-\i slack/QUAD_slack_messages.tbl.sql
+\echo '[16/16] Loading Messenger Tables (3)...'
+\i messenger/QUAD_messenger_channels.tbl.sql
+\i messenger/QUAD_messenger_commands.tbl.sql
+\i messenger/QUAD_messenger_outbound.tbl.sql
 
 -- ============================================================================
 -- DONE
@@ -261,14 +266,14 @@
 \echo '✅ QUAD Framework schema loaded successfully!'
 \echo '=============================================='
 \echo ''
-\echo '127 tables created in 16 categories:'
-\echo '  [1]  Core         - 13 tables (orgs, users, roles, config)'
+\echo '132 tables created in 16 categories:'
+\echo '  [1]  Core         - 14 tables (orgs, users, roles, rules)'
 \echo '  [2]  Domains      - 10 tables (projects, resources)'
 \echo '  [3]  Tickets      -  8 tables (circles, cycles, tickets)'
 \echo '  [4]  Git          -  6 tables (repos, PRs, approvals)'
 \echo '  [5]  Meetings     -  4 tables (calendar, actions)'
 \echo '  [6]  Memory       -  8 tables (docs, chunks, context)'
-\echo '  [7]  AI           - 16 tables (providers, credits, RAG)'
+\echo '  [7]  AI           - 19 tables (providers, credits, tracking)'
 \echo '  [8]  Infra        -  9 tables (sandbox, cache, index)'
 \echo '  [9]  Skills       -  3 tables (skills, feedback)'
 \echo '  [10] Flows        -  9 tables (deploy, release)'
@@ -277,5 +282,5 @@
 \echo '  [13] Analytics    -  9 tables (DORA, rankings)'
 \echo '  [14] Security     -  4 tables (secrets, runbooks)'
 \echo '  [15] Onboarding   -  8 tables (setup, training)'
-\echo '  [16] Slack        -  2 tables (bot, messages)'
+\echo '  [16] Messenger    -  3 tables (channels, commands, outbound)'
 \echo ''
