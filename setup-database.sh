@@ -19,10 +19,10 @@ echo ""
 
 # Database connection details
 DB_HOST="${DB_HOST:-localhost}"
-DB_PORT="${DB_PORT:-16201}"
-DB_NAME="${DB_NAME:-nutrinine_dev_db}"
-DB_USER="${DB_USER:-nutrinine_user}"
-DB_PASS="${DB_PASS:-nutrinine_dev_pass}"
+DB_PORT="${DB_PORT:-14201}"
+DB_NAME="${DB_NAME:-quad_dev_db}"
+DB_USER="${DB_USER:-quad_user}"
+DB_PASS="${DB_PASS:-quad_dev_pass}"
 
 echo -e "${BLUE}Database:${NC} $DB_NAME"
 echo -e "${BLUE}Host:${NC} $DB_HOST:$DB_PORT"
