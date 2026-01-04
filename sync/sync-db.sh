@@ -140,76 +140,242 @@ run_psql_file() {
     fi
 }
 
-# Full schema mode - apply migration files in order
+# Full schema mode - apply all 127 tables in dependency order
 if [[ "$FULL_MODE" == true ]]; then
-    echo -e "${YELLOW}Applying full schema (migration files)...${NC}"
+    echo -e "${YELLOW}Applying full schema (127 tables in dependency order)...${NC}"
     echo ""
 
-    MIGRATIONS_DIR="$DB_ROOT/migrations"
-    FEATURES_FILE="$SQL_DIR/003_quad_features.sql"
+    # Apply tables in correct dependency order (matching schema.sql)
+    # This order ensures foreign key references are satisfied
 
-    # Define migration files in order
-    MIGRATION_FILES=(
-        "$MIGRATIONS_DIR/000_create_core_tables.sql"
-        "$MIGRATIONS_DIR/001_create_resource_attribute_model.sql"
-        "$MIGRATIONS_DIR/002_create_multi_tenant_domain_sso.sql"
-        "$FEATURES_FILE"
-    )
-
-    for FILE in "${MIGRATION_FILES[@]}"; do
+    apply_table_file() {
+        local FILE="$1"
+        local DIR=$(dirname "$FILE" | xargs basename)
         if [[ -f "$FILE" ]]; then
-            echo "  Applying: $(basename $FILE)"
+            echo -n "  $DIR/$(basename $FILE)... "
             OUTPUT=$(run_psql_file "$FILE" 2>&1)
-
-            # Check for errors (ignore "already exists" messages)
-            if echo "$OUTPUT" | grep -qi "error" | grep -v "already exists"; then
-                echo -e "${RED}    Warning: Some errors occurred${NC}"
+            if echo "$OUTPUT" | grep -qi "already exists"; then
+                echo -e "${YELLOW}exists${NC}"
+            elif echo "$OUTPUT" | grep -qi "error"; then
+                echo -e "${RED}ERROR${NC}"
                 if [[ "$VERBOSE" == true ]]; then
-                    echo "$OUTPUT" | head -20
+                    echo "    $OUTPUT" | head -3
                 fi
             else
-                echo -e "${GREEN}    OK${NC}"
+                echo -e "${GREEN}OK${NC}"
             fi
-        else
-            echo -e "${RED}  Missing: $(basename $FILE)${NC}"
         fi
-    done
+    }
+
+    # ============================================================================
+    # CORE TABLES (Organizations, Users, Roles) - 13 tables
+    # ============================================================================
+    echo -e "${YELLOW}[1/16] Core Tables...${NC}"
+    apply_table_file "$SQL_DIR/core/QUAD_org_tiers.tbl.sql"
+    apply_table_file "$SQL_DIR/core/QUAD_organizations.tbl.sql"
+    apply_table_file "$SQL_DIR/core/QUAD_org_settings.tbl.sql"
+    apply_table_file "$SQL_DIR/core/QUAD_org_setup_status.tbl.sql"
+    apply_table_file "$SQL_DIR/core/QUAD_sso_configs.tbl.sql"
+    apply_table_file "$SQL_DIR/core/QUAD_users.tbl.sql"
+    apply_table_file "$SQL_DIR/core/QUAD_user_sessions.tbl.sql"
+    apply_table_file "$SQL_DIR/core/QUAD_email_verification_codes.tbl.sql"
+    apply_table_file "$SQL_DIR/core/QUAD_roles.tbl.sql"
+    apply_table_file "$SQL_DIR/core/QUAD_core_roles.tbl.sql"
+    apply_table_file "$SQL_DIR/core/QUAD_org_members.tbl.sql"
+    apply_table_file "$SQL_DIR/core/QUAD_org_invitations.tbl.sql"
+    apply_table_file "$SQL_DIR/core/QUAD_config_settings.tbl.sql"
+
+    # ============================================================================
+    # DOMAINS & PROJECTS - 10 tables
+    # ============================================================================
+    echo -e "${YELLOW}[2/16] Domain Tables...${NC}"
+    apply_table_file "$SQL_DIR/domains/QUAD_domains.tbl.sql"
+    apply_table_file "$SQL_DIR/domains/QUAD_domain_members.tbl.sql"
+    apply_table_file "$SQL_DIR/domains/QUAD_domain_resources.tbl.sql"
+    apply_table_file "$SQL_DIR/domains/QUAD_domain_operations.tbl.sql"
+    apply_table_file "$SQL_DIR/domains/QUAD_resource_attributes.tbl.sql"
+    apply_table_file "$SQL_DIR/domains/QUAD_resource_attribute_requirements.tbl.sql"
+    apply_table_file "$SQL_DIR/domains/QUAD_requirements.tbl.sql"
+    apply_table_file "$SQL_DIR/domains/QUAD_milestones.tbl.sql"
+    apply_table_file "$SQL_DIR/domains/QUAD_adoption_matrix.tbl.sql"
+    apply_table_file "$SQL_DIR/domains/QUAD_workload_metrics.tbl.sql"
+
+    # ============================================================================
+    # CIRCLES & TICKETS - 8 tables
+    # ============================================================================
+    echo -e "${YELLOW}[3/16] Ticket Tables...${NC}"
+    apply_table_file "$SQL_DIR/tickets/QUAD_circles.tbl.sql"
+    apply_table_file "$SQL_DIR/tickets/QUAD_circle_members.tbl.sql"
+    apply_table_file "$SQL_DIR/tickets/QUAD_cycles.tbl.sql"
+    apply_table_file "$SQL_DIR/tickets/QUAD_tickets.tbl.sql"
+    apply_table_file "$SQL_DIR/tickets/QUAD_ticket_comments.tbl.sql"
+    apply_table_file "$SQL_DIR/tickets/QUAD_ticket_time_logs.tbl.sql"
+    apply_table_file "$SQL_DIR/tickets/QUAD_ticket_skills.tbl.sql"
+    apply_table_file "$SQL_DIR/tickets/QUAD_assignment_scores.tbl.sql"
+
+    # ============================================================================
+    # GIT & PULL REQUESTS - 6 tables
+    # ============================================================================
+    echo -e "${YELLOW}[4/16] Git Tables...${NC}"
+    apply_table_file "$SQL_DIR/git/QUAD_git_integrations.tbl.sql"
+    apply_table_file "$SQL_DIR/git/QUAD_git_repositories.tbl.sql"
+    apply_table_file "$SQL_DIR/git/QUAD_pull_requests.tbl.sql"
+    apply_table_file "$SQL_DIR/git/QUAD_pr_reviewers.tbl.sql"
+    apply_table_file "$SQL_DIR/git/QUAD_pr_approvals.tbl.sql"
+    apply_table_file "$SQL_DIR/git/QUAD_git_operations.tbl.sql"
+
+    # ============================================================================
+    # MEETINGS & CALENDAR - 4 tables
+    # ============================================================================
+    echo -e "${YELLOW}[5/16] Meeting Tables...${NC}"
+    apply_table_file "$SQL_DIR/meetings/QUAD_meeting_integrations.tbl.sql"
+    apply_table_file "$SQL_DIR/meetings/QUAD_meetings.tbl.sql"
+    apply_table_file "$SQL_DIR/meetings/QUAD_meeting_action_items.tbl.sql"
+    apply_table_file "$SQL_DIR/meetings/QUAD_meeting_follow_ups.tbl.sql"
+
+    # ============================================================================
+    # QUAD MEMORY SYSTEM - 8 tables
+    # ============================================================================
+    echo -e "${YELLOW}[6/16] Memory Tables...${NC}"
+    apply_table_file "$SQL_DIR/memory/QUAD_memory_documents.tbl.sql"
+    apply_table_file "$SQL_DIR/memory/QUAD_memory_chunks.tbl.sql"
+    apply_table_file "$SQL_DIR/memory/QUAD_memory_keywords.tbl.sql"
+    apply_table_file "$SQL_DIR/memory/QUAD_memory_templates.tbl.sql"
+    apply_table_file "$SQL_DIR/memory/QUAD_context_sessions.tbl.sql"
+    apply_table_file "$SQL_DIR/memory/QUAD_context_requests.tbl.sql"
+    apply_table_file "$SQL_DIR/memory/QUAD_context_rules.tbl.sql"
+    apply_table_file "$SQL_DIR/memory/QUAD_memory_update_queue.tbl.sql"
+
+    # ============================================================================
+    # AI & PROVIDERS - 16 tables
+    # ============================================================================
+    echo -e "${YELLOW}[7/16] AI Tables...${NC}"
+    apply_table_file "$SQL_DIR/ai/QUAD_ai_provider_config.tbl.sql"
+    apply_table_file "$SQL_DIR/ai/QUAD_ai_configs.tbl.sql"
+    apply_table_file "$SQL_DIR/ai/QUAD_ai_operations.tbl.sql"
+    apply_table_file "$SQL_DIR/ai/QUAD_ai_contexts.tbl.sql"
+    apply_table_file "$SQL_DIR/ai/QUAD_ai_context_relationships.tbl.sql"
+    apply_table_file "$SQL_DIR/ai/QUAD_ai_code_reviews.tbl.sql"
+    apply_table_file "$SQL_DIR/ai/QUAD_ai_conversations.tbl.sql"
+    apply_table_file "$SQL_DIR/ai/QUAD_ai_messages.tbl.sql"
+    apply_table_file "$SQL_DIR/ai/QUAD_ai_user_memories.tbl.sql"
+    apply_table_file "$SQL_DIR/ai/QUAD_ai_activity_routing.tbl.sql"
+    apply_table_file "$SQL_DIR/ai/QUAD_ai_analysis_cache.tbl.sql"
+    apply_table_file "$SQL_DIR/ai/QUAD_ai_credit_balances.tbl.sql"
+    apply_table_file "$SQL_DIR/ai/QUAD_ai_credit_transactions.tbl.sql"
+    apply_table_file "$SQL_DIR/ai/QUAD_platform_credit_pool.tbl.sql"
+    apply_table_file "$SQL_DIR/ai/QUAD_platform_pool_transactions.tbl.sql"
+    apply_table_file "$SQL_DIR/ai/QUAD_rag_indexes.tbl.sql"
+
+    # ============================================================================
+    # INFRASTRUCTURE - 9 tables
+    # ============================================================================
+    echo -e "${YELLOW}[8/16] Infrastructure Tables...${NC}"
+    apply_table_file "$SQL_DIR/infrastructure/QUAD_infrastructure_config.tbl.sql"
+    apply_table_file "$SQL_DIR/infrastructure/QUAD_sandbox_instances.tbl.sql"
+    apply_table_file "$SQL_DIR/infrastructure/QUAD_sandbox_usage.tbl.sql"
+    apply_table_file "$SQL_DIR/infrastructure/QUAD_ticket_sandbox_groups.tbl.sql"
+    apply_table_file "$SQL_DIR/infrastructure/QUAD_codebase_files.tbl.sql"
+    apply_table_file "$SQL_DIR/infrastructure/QUAD_codebase_indexes.tbl.sql"
+    apply_table_file "$SQL_DIR/infrastructure/QUAD_code_cache.tbl.sql"
+    apply_table_file "$SQL_DIR/infrastructure/QUAD_cache_usage.tbl.sql"
+    apply_table_file "$SQL_DIR/infrastructure/QUAD_indexing_usage.tbl.sql"
+
+    # ============================================================================
+    # SKILLS & ASSIGNMENTS - 3 tables
+    # ============================================================================
+    echo -e "${YELLOW}[9/16] Skills Tables...${NC}"
+    apply_table_file "$SQL_DIR/skills/QUAD_skills.tbl.sql"
+    apply_table_file "$SQL_DIR/skills/QUAD_user_skills.tbl.sql"
+    apply_table_file "$SQL_DIR/skills/QUAD_skill_feedback.tbl.sql"
+
+    # ============================================================================
+    # FLOWS & DEPLOYMENTS - 9 tables
+    # ============================================================================
+    echo -e "${YELLOW}[10/16] Flow Tables...${NC}"
+    apply_table_file "$SQL_DIR/flows/QUAD_flows.tbl.sql"
+    apply_table_file "$SQL_DIR/flows/QUAD_flow_stage_history.tbl.sql"
+    apply_table_file "$SQL_DIR/flows/QUAD_flow_branches.tbl.sql"
+    apply_table_file "$SQL_DIR/flows/QUAD_environments.tbl.sql"
+    apply_table_file "$SQL_DIR/flows/QUAD_deployment_recipes.tbl.sql"
+    apply_table_file "$SQL_DIR/flows/QUAD_deployments.tbl.sql"
+    apply_table_file "$SQL_DIR/flows/QUAD_release_notes.tbl.sql"
+    apply_table_file "$SQL_DIR/flows/QUAD_release_contributors.tbl.sql"
+    apply_table_file "$SQL_DIR/flows/QUAD_rollback_operations.tbl.sql"
+
+    # ============================================================================
+    # PORTAL & ACCESS - 2 tables
+    # ============================================================================
+    echo -e "${YELLOW}[11/16] Portal Tables...${NC}"
+    apply_table_file "$SQL_DIR/portal/QUAD_portal_access.tbl.sql"
+    apply_table_file "$SQL_DIR/portal/QUAD_portal_audit_log.tbl.sql"
+
+    # ============================================================================
+    # OTHER TABLES - 16 tables
+    # ============================================================================
+    echo -e "${YELLOW}[12/16] Other Tables...${NC}"
+    apply_table_file "$SQL_DIR/other/QUAD_notifications.tbl.sql"
+    apply_table_file "$SQL_DIR/other/QUAD_notification_preferences.tbl.sql"
+    apply_table_file "$SQL_DIR/other/QUAD_user_role_allocations.tbl.sql"
+    apply_table_file "$SQL_DIR/other/QUAD_approvals.tbl.sql"
+    apply_table_file "$SQL_DIR/other/QUAD_file_imports.tbl.sql"
+    apply_table_file "$SQL_DIR/other/QUAD_work_sessions.tbl.sql"
+    apply_table_file "$SQL_DIR/other/QUAD_user_activity_summaries.tbl.sql"
+    apply_table_file "$SQL_DIR/other/QUAD_database_connections.tbl.sql"
+    apply_table_file "$SQL_DIR/other/QUAD_database_operations.tbl.sql"
+    apply_table_file "$SQL_DIR/other/QUAD_database_approvals.tbl.sql"
+    apply_table_file "$SQL_DIR/other/QUAD_anonymization_rules.tbl.sql"
+    apply_table_file "$SQL_DIR/other/QUAD_verification_requests.tbl.sql"
+    apply_table_file "$SQL_DIR/other/QUAD_validated_credentials.tbl.sql"
+    apply_table_file "$SQL_DIR/other/QUAD_integration_health_checks.tbl.sql"
+    apply_table_file "$SQL_DIR/other/QUAD_api_access_config.tbl.sql"
+    apply_table_file "$SQL_DIR/other/QUAD_api_request_logs.tbl.sql"
+
+    # ============================================================================
+    # ANALYTICS & METRICS - 9 tables
+    # ============================================================================
+    echo -e "${YELLOW}[13/16] Analytics Tables...${NC}"
+    apply_table_file "$SQL_DIR/analytics/QUAD_cycle_risk_predictions.tbl.sql"
+    apply_table_file "$SQL_DIR/analytics/QUAD_story_point_suggestions.tbl.sql"
+    apply_table_file "$SQL_DIR/analytics/QUAD_technical_debt_scores.tbl.sql"
+    apply_table_file "$SQL_DIR/analytics/QUAD_dora_metrics.tbl.sql"
+    apply_table_file "$SQL_DIR/analytics/QUAD_ranking_configs.tbl.sql"
+    apply_table_file "$SQL_DIR/analytics/QUAD_user_rankings.tbl.sql"
+    apply_table_file "$SQL_DIR/analytics/QUAD_kudos.tbl.sql"
+    apply_table_file "$SQL_DIR/analytics/QUAD_cost_estimates.tbl.sql"
+    apply_table_file "$SQL_DIR/analytics/QUAD_risk_factors.tbl.sql"
+
+    # ============================================================================
+    # SECURITY - 4 tables
+    # ============================================================================
+    echo -e "${YELLOW}[14/16] Security Tables...${NC}"
+    apply_table_file "$SQL_DIR/security/QUAD_secret_scans.tbl.sql"
+    apply_table_file "$SQL_DIR/security/QUAD_secret_rotations.tbl.sql"
+    apply_table_file "$SQL_DIR/security/QUAD_incident_runbooks.tbl.sql"
+    apply_table_file "$SQL_DIR/security/QUAD_runbook_executions.tbl.sql"
+
+    # ============================================================================
+    # ONBOARDING & SETUP - 8 tables
+    # ============================================================================
+    echo -e "${YELLOW}[15/16] Onboarding Tables...${NC}"
+    apply_table_file "$SQL_DIR/onboarding/QUAD_resource_setup_templates.tbl.sql"
+    apply_table_file "$SQL_DIR/onboarding/QUAD_user_resource_setups.tbl.sql"
+    apply_table_file "$SQL_DIR/onboarding/QUAD_setup_bundles.tbl.sql"
+    apply_table_file "$SQL_DIR/onboarding/QUAD_user_setup_journeys.tbl.sql"
+    apply_table_file "$SQL_DIR/onboarding/QUAD_developer_onboarding_templates.tbl.sql"
+    apply_table_file "$SQL_DIR/onboarding/QUAD_developer_onboarding_progress.tbl.sql"
+    apply_table_file "$SQL_DIR/onboarding/QUAD_training_content.tbl.sql"
+    apply_table_file "$SQL_DIR/onboarding/QUAD_training_completions.tbl.sql"
+
+    # ============================================================================
+    # SLACK INTEGRATION - 2 tables
+    # ============================================================================
+    echo -e "${YELLOW}[16/16] Slack Tables...${NC}"
+    apply_table_file "$SQL_DIR/slack/QUAD_slack_bot_commands.tbl.sql"
+    apply_table_file "$SQL_DIR/slack/QUAD_slack_messages.tbl.sql"
 
     echo ""
-
-    # Also apply individual .tbl.sql files from sql subdirectories
-    echo -e "${YELLOW}Applying individual table files...${NC}"
-
-    # Functions first (needed by tables)
-    for FILE in "$SQL_DIR"/functions/*.fnc.sql; do
-        if [[ -f "$FILE" ]]; then
-            echo "  Applying: $(basename $FILE)"
-            run_psql_file "$FILE" > /dev/null 2>&1 || echo -e "${YELLOW}    (already exists or skipped)${NC}"
-        fi
-    done
-
-    # Then individual table files (in dependency order)
-    TBL_DIRS=("core" "domains" "infrastructure" "memory")
-    for DIR in "${TBL_DIRS[@]}"; do
-        if [[ -d "$SQL_DIR/$DIR" ]]; then
-            for FILE in "$SQL_DIR/$DIR"/*.tbl.sql; do
-                if [[ -f "$FILE" ]]; then
-                    echo "  Applying: $DIR/$(basename $FILE)"
-                    OUTPUT=$(run_psql_file "$FILE" 2>&1)
-                    if echo "$OUTPUT" | grep -qi "already exists"; then
-                        echo -e "${YELLOW}    (already exists)${NC}"
-                    elif echo "$OUTPUT" | grep -qi "error"; then
-                        echo -e "${RED}    Warning: $OUTPUT${NC}" | head -1
-                    else
-                        echo -e "${GREEN}    OK${NC}"
-                    fi
-                fi
-            done
-        fi
-    done
-
-    echo ""
-    echo -e "${GREEN}Full schema applied!${NC}"
+    echo -e "${GREEN}✅ Full schema applied! (127 tables in 16 categories)${NC}"
     echo ""
 fi
 
