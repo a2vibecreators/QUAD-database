@@ -58,6 +58,7 @@ usage() {
     echo "  --fix            Generate fix script (don't apply)"
     echo "  --apply          Apply missing schema (creates tables)"
     echo "  --full           Apply full schema.sql (fresh install)"
+    echo "  --schema-diff    Compare .tbl.sql files to database (using migra)"
     echo "  --verbose        Show detailed output"
     echo ""
     echo "Examples:"
@@ -66,6 +67,7 @@ usage() {
     echo "  $0 qa --tables-only       # Check QA tables only"
     echo "  $0 dev --fix              # Generate fix script for DEV"
     echo "  $0 dev --apply            # Apply missing tables to DEV"
+    echo "  $0 dev --schema-diff      # Generate ALTER statements (migra)"
     exit 1
 }
 
@@ -76,6 +78,7 @@ FUNCTIONS_ONLY=false
 FIX_MODE=false
 APPLY_MODE=false
 FULL_MODE=false
+SCHEMA_DIFF=false
 VERBOSE=false
 
 while [[ $# -gt 0 ]]; do
@@ -97,6 +100,9 @@ while [[ $# -gt 0 ]]; do
             ;;
         --full)
             FULL_MODE=true
+            ;;
+        --schema-diff)
+            SCHEMA_DIFF=true
             ;;
         --verbose)
             VERBOSE=true
@@ -139,6 +145,142 @@ run_psql_file() {
         PGPASSWORD="$DB_PASS" psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME < "$1" 2>&1
     fi
 }
+
+# Schema diff mode - compare .tbl.sql files to database using migra
+if [[ "$SCHEMA_DIFF" == true ]]; then
+    echo "========================================"
+    echo "QUAD Database Schema Diff (using migra)"
+    echo "========================================"
+
+    # Check if migra is installed
+    if ! command -v migra &> /dev/null; then
+        echo -e "${RED}ERROR: migra is not installed${NC}"
+        echo ""
+        echo "Install migra:"
+        echo "  brew install pipx"
+        echo "  pipx install 'migra[pg]'"
+        echo "  pipx inject migra setuptools"
+        echo ""
+        exit 1
+    fi
+
+    # Step 1: Create temp database
+    TEMP_DB="${DB_NAME}_temp_$(date +%s)"
+    echo "[1/6] Creating temporary database: $TEMP_DB"
+    run_psql "CREATE DATABASE $TEMP_DB;" > /dev/null
+
+    # Step 2: Load all .tbl.sql files into temp database
+    echo "[2/6] Loading .tbl.sql files into temporary database..."
+    for tbl_file in $(find "$SQL_DIR" -name "*.tbl.sql" | sort); do
+        if [[ "$VERBOSE" == true ]]; then
+            echo "  Loading: $(basename $tbl_file)"
+        fi
+        if [[ -n "$CONTAINER" ]]; then
+            docker exec -i "$CONTAINER" psql -U $DB_USER -d $TEMP_DB < "$tbl_file" 2>&1 | grep -v "already exists" > /dev/null || true
+        else
+            PGPASSWORD="$DB_PASS" psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $TEMP_DB -f "$tbl_file" 2>&1 | grep -v "already exists" > /dev/null || true
+        fi
+    done
+
+    # Step 3: Run migra to compare schemas
+    echo "[3/6] Running migra schema comparison..."
+    ACTUAL_URL="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+    TEMP_URL="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${TEMP_DB}"
+
+    ALTER_SQL=$(migra --unsafe "$ACTUAL_URL" "$TEMP_URL" 2>&1)
+
+    if [[ -z "$ALTER_SQL" ]] || [[ "$ALTER_SQL" == *"Identical"* ]]; then
+        echo -e "${GREEN}✓ No schema differences detected${NC}"
+        echo "[4/6] Cleaning up temporary database..."
+        run_psql "DROP DATABASE $TEMP_DB;" > /dev/null
+        exit 0
+    fi
+
+    # Step 4: Show differences
+    echo "[4/6] Schema differences detected:"
+    echo "────────────────────────────────────────"
+    echo "$ALTER_SQL"
+    echo "────────────────────────────────────────"
+    echo ""
+
+    # Step 5: Prompt for metadata
+    echo "[5/6] Migration metadata:"
+    read -p "  Jira ticket (e.g., QUAD-123): " JIRA_TICKET
+    read -p "  Release version (e.g., v1.2.0): " RELEASE_VERSION
+    read -p "  Description: " DESCRIPTION
+
+    # Step 6: Create migration file
+    echo "[6/6] Creating migration file..."
+
+    # Get next version number
+    MIGRATIONS_DIR="$DB_ROOT/migrations"
+    if [[ ! -d "$MIGRATIONS_DIR" ]]; then
+        mkdir -p "$MIGRATIONS_DIR"
+        NEXT_VERSION=1
+    else
+        LAST_VERSION=$(ls "$MIGRATIONS_DIR" 2>/dev/null | grep -E "^V[0-9]+" | sed 's/V\([0-9]*\)__.*/\1/' | sort -n | tail -1)
+        if [[ -z "$LAST_VERSION" ]]; then
+            NEXT_VERSION=1
+        else
+            NEXT_VERSION=$((LAST_VERSION + 1))
+        fi
+    fi
+
+    # Generate filename
+    DESCRIPTION_KEBAB=$(echo "$DESCRIPTION" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
+    MIGRATION_FILE="$MIGRATIONS_DIR/V${NEXT_VERSION}__${JIRA_TICKET}_${DESCRIPTION_KEBAB}.sql"
+
+    # Write migration file with metadata header
+    cat > "$MIGRATION_FILE" << EOF
+-- ============================================================
+-- QUAD Platform Schema Migration
+-- ============================================================
+-- Migration Version: $NEXT_VERSION
+-- Jira Ticket: https://jira.company.com/browse/${JIRA_TICKET}
+-- Release: $RELEASE_VERSION
+-- Author: $(whoami)
+-- Generated Date: $(date +"%Y-%m-%d %H:%M:%S")
+-- Generated by: sync-db.sh (migra)
+-- Source: quad-database/sql/**/*.tbl.sql
+-- ============================================================
+
+-- Description: $DESCRIPTION
+
+$ALTER_SQL
+
+-- ============================================================
+-- Rollback Instructions:
+-- Review the ALTER statements above and manually reverse them
+-- Example:
+--   ALTER TABLE ... ADD COLUMN ... → ALTER TABLE ... DROP COLUMN ...
+--   ALTER TABLE ... ALTER COLUMN ... → ALTER TABLE ... ALTER COLUMN ... (reverse)
+-- ============================================================
+EOF
+
+    echo -e "${GREEN}✓ Created: $MIGRATION_FILE${NC}"
+    echo ""
+
+    # Cleanup temp database
+    run_psql "DROP DATABASE $TEMP_DB;" > /dev/null
+
+    # Prompt to apply
+    read -p "Apply migration now? [y/N] " CONFIRM
+    if [[ "$CONFIRM" == "y" ]] || [[ "$CONFIRM" == "Y" ]]; then
+        echo "Applying migration..."
+        run_psql_file "$MIGRATION_FILE"
+
+        echo -e "${GREEN}✓ Migration applied successfully${NC}"
+        echo ""
+        echo "Migration history tracked in Git:"
+        echo "  git add migrations/V${NEXT_VERSION}__${JIRA_TICKET}_${DESCRIPTION_KEBAB}.sql sql/**/*.tbl.sql"
+        echo "  git commit -m '${JIRA_TICKET}: $DESCRIPTION'"
+    else
+        echo -e "${YELLOW}Migration file created but not applied${NC}"
+        echo "To apply later: ./sync-db.sh $ENV --apply-migration V${NEXT_VERSION}"
+    fi
+
+    exit 0
+fi
 
 # Full schema mode - apply all 127 tables in dependency order
 if [[ "$FULL_MODE" == true ]]; then
