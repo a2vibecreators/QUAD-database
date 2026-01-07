@@ -6,9 +6,13 @@
 
 CREATE TABLE IF NOT EXISTS quad_users (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    company_id      UUID REFERENCES quad_companies(id) ON DELETE SET NULL,
+    company_id      UUID REFERENCES quad_organizations(id) ON DELETE SET NULL,
     email           VARCHAR(255) NOT NULL UNIQUE,
+    password_hash   VARCHAR(255),
     name            VARCHAR(255),
+    full_name       VARCHAR(255),
+    role            VARCHAR(50),
+    org_id          UUID,
     avatar_url      VARCHAR(255),
     department      VARCHAR(255),
     job_title       VARCHAR(255),
@@ -17,6 +21,7 @@ CREATE TABLE IF NOT EXISTS quad_users (
     timezone        VARCHAR(255),
     is_active       BOOLEAN DEFAULT true,
     is_admin        BOOLEAN DEFAULT false,
+    email_verified  BOOLEAN DEFAULT false,
     last_login_at   TIMESTAMP,
     created_at      TIMESTAMP DEFAULT NOW(),
     updated_at      TIMESTAMP DEFAULT NOW()

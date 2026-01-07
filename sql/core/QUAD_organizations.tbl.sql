@@ -1,63 +1,35 @@
--- QUAD_organizations Table
--- Core organization entity with hierarchical support
+-- quad_organizations Table
+-- Core organization/company entity (matches Java Organization.java entity)
 --
--- Parent Structure:
---   parent_id = NULL → Root organization
---   parent_id != NULL → Sub-organization (nested under parent)
---
--- Path Example: /acme/engineering/frontend
---
+-- Part of: QUAD Core
 -- Created: January 2026
--- Last Modified: January 3, 2026
+-- Last Modified: January 6, 2026
 
-CREATE TABLE IF NOT EXISTS QUAD_organizations (
+CREATE TABLE IF NOT EXISTS quad_organizations (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    parent_id       UUID REFERENCES QUAD_organizations(id) ON DELETE CASCADE,
     name            VARCHAR(255) NOT NULL,
     slug            VARCHAR(100) UNIQUE,
-    admin_email     VARCHAR(255) NOT NULL,
-    description     TEXT,
-    size            VARCHAR(50) DEFAULT 'medium',
-    tier_id         UUID, -- Will reference QUAD_org_tiers when created
-    path            VARCHAR(500), -- Materialized path: /parent/child/grandchild
+    contact_email   VARCHAR(255),
+    billing_email   VARCHAR(255),
+    contact_phone   VARCHAR(255),
+    website         VARCHAR(255),
+    industry        VARCHAR(255),
+    team_size       VARCHAR(50),
+    timezone        VARCHAR(255),
+    logo_url        VARCHAR(255),
+    ai_tier         VARCHAR(50),
+    sandbox_strategy VARCHAR(50),
     is_active       BOOLEAN DEFAULT true,
-
-    -- Portal organization support
-    org_type        VARCHAR(20) DEFAULT 'CUSTOMER',
-    -- CUSTOMER = normal customer org
-    -- PORTAL = system portal org (platform admin access)
-    -- TEST = internal testing org
-    -- DEMO = demo/showcase org
-    is_visible      BOOLEAN DEFAULT true, -- false hides from org listings
-
-    created_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at      TIMESTAMP DEFAULT NOW(),
+    updated_at      TIMESTAMP DEFAULT NOW()
 );
 
 -- Indexes
-CREATE INDEX IF NOT EXISTS idx_quad_organizations_tier_id ON QUAD_organizations(tier_id);
-CREATE INDEX IF NOT EXISTS idx_quad_organizations_slug ON QUAD_organizations(slug);
-CREATE INDEX IF NOT EXISTS idx_quad_organizations_parent_id ON QUAD_organizations(parent_id);
-CREATE INDEX IF NOT EXISTS idx_quad_organizations_org_type ON QUAD_organizations(org_type);
-CREATE INDEX IF NOT EXISTS idx_quad_organizations_path ON QUAD_organizations(path);
-
--- Trigger for updated_at
-CREATE OR REPLACE FUNCTION update_quad_organizations_timestamp()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trg_quad_organizations_updated ON QUAD_organizations;
-CREATE TRIGGER trg_quad_organizations_updated
-    BEFORE UPDATE ON QUAD_organizations
-    FOR EACH ROW
-    EXECUTE FUNCTION update_quad_organizations_timestamp();
+CREATE INDEX IF NOT EXISTS idx_quad_organizations_slug ON quad_organizations(slug);
+CREATE INDEX IF NOT EXISTS idx_quad_organizations_contact_email ON quad_organizations(contact_email);
 
 -- Comments
-COMMENT ON TABLE QUAD_organizations IS 'Core organization entity with hierarchical sub-org support';
-COMMENT ON COLUMN QUAD_organizations.parent_id IS 'NULL for root orgs, references parent for sub-orgs';
-COMMENT ON COLUMN QUAD_organizations.path IS 'Materialized path for fast hierarchy queries';
-COMMENT ON COLUMN QUAD_organizations.org_type IS 'CUSTOMER, PORTAL, TEST, or DEMO';
+COMMENT ON TABLE quad_organizations IS 'Core organization/company accounts';
+COMMENT ON COLUMN quad_organizations.slug IS 'Unique URL-safe identifier';
+COMMENT ON COLUMN quad_organizations.ai_tier IS 'AI pricing tier (turbo/balanced/quality/byok)';
+COMMENT ON COLUMN quad_organizations.sandbox_strategy IS 'Sandbox isolation strategy';
