@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS QUAD_suma_api_keys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
     -- Foreign keys
-    company_id UUID NOT NULL REFERENCES QUAD_companies(id) ON DELETE CASCADE,
+    org_id UUID NOT NULL REFERENCES QUAD_organizations(id) ON DELETE CASCADE,
     created_by UUID REFERENCES QUAD_users(id),
 
     -- API key details
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS QUAD_suma_api_keys (
 
 -- Indexes for performance
 CREATE INDEX idx_suma_api_keys_api_key ON QUAD_suma_api_keys(api_key) WHERE is_active = true;
-CREATE INDEX idx_suma_api_keys_company ON QUAD_suma_api_keys(company_id);
+CREATE INDEX idx_suma_api_keys_org ON QUAD_suma_api_keys(org_id);
 CREATE INDEX idx_suma_api_keys_environment ON QUAD_suma_api_keys(environment);
 
 -- Comments

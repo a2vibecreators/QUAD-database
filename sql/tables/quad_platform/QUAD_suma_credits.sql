@@ -6,8 +6,8 @@ CREATE TABLE IF NOT EXISTS QUAD_suma_credits (
     -- Primary key
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-    -- Foreign key (one record per company)
-    company_id UUID NOT NULL UNIQUE REFERENCES QUAD_companies(id) ON DELETE CASCADE,
+    -- Foreign key (one record per organization)
+    org_id UUID NOT NULL UNIQUE REFERENCES QUAD_organizations(id) ON DELETE CASCADE,
 
     -- Token balance (prepaid)
     balance_tokens BIGINT DEFAULT 0 CHECK (balance_tokens >= 0),
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS QUAD_suma_credits (
 );
 
 -- Indexes
-CREATE INDEX idx_suma_credits_company ON QUAD_suma_credits(company_id);
+CREATE INDEX idx_suma_credits_org ON QUAD_suma_credits(org_id);
 CREATE INDEX idx_suma_credits_balance ON QUAD_suma_credits(balance_tokens) WHERE balance_tokens > 0;
 
 -- Trigger to update updated_at timestamp
