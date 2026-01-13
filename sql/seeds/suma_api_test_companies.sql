@@ -12,11 +12,11 @@
  * @since January 9, 2026
  */
 
--- First, verify QUAD_companies table exists (dependency)
+-- First, verify QUAD_organizations table exists (dependency)
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'quad_companies') THEN
-        RAISE EXCEPTION 'QUAD_companies table does not exist. Please create it first.';
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'quad_organizations') THEN
+        RAISE EXCEPTION 'QUAD_organizations table does not exist. Please create it first.';
     END IF;
 END $$;
 
@@ -24,8 +24,8 @@ END $$;
 -- 1. NutriNine (Internal Test Company)
 -- ==============================================================================
 
--- Insert company (if not exists)
-INSERT INTO QUAD_companies (id, name, admin_email, size, created_at, updated_at)
+-- Insert organization (if not exists)
+INSERT INTO QUAD_organizations (id, name, admin_email, size, created_at, updated_at)
 VALUES (
     'a1b2c3d4-e5f6-7890-abcd-ef1234567890'::uuid,
     'NutriNine Health',
@@ -36,7 +36,7 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- Insert prepaid credits (10,000 tokens = $80 worth)
-INSERT INTO QUAD_suma_credits (id, company_id, balance_tokens, total_purchased, total_used, lifetime_spend_usd, created_at, updated_at)
+INSERT INTO QUAD_suma_credits (id, org_id, balance_tokens, total_purchased, total_used, lifetime_spend_usd, created_at, updated_at)
 VALUES (
     gen_random_uuid(),
     'a1b2c3d4-e5f6-7890-abcd-ef1234567890'::uuid,
@@ -46,11 +46,11 @@ VALUES (
     80.00,  -- $80 spent
     NOW(),
     NOW()
-) ON CONFLICT (company_id) DO NOTHING;
+) ON CONFLICT (org_id) DO NOTHING;
 
 -- Insert API key (sk_test_... for sandbox testing)
 INSERT INTO QUAD_suma_api_keys (
-    id, company_id, api_key, api_secret_hash, name, environment,
+    id, org_id, api_key, api_secret_hash, name, environment,
     rate_limit_per_minute, rate_limit_per_day, allowed_domains, is_active, created_at, last_used_at
 ) VALUES (
     gen_random_uuid(),
@@ -71,8 +71,8 @@ INSERT INTO QUAD_suma_api_keys (
 -- 2. A2Vibe Creators (Internal Test Company)
 -- ==============================================================================
 
--- Insert company (if not exists)
-INSERT INTO QUAD_companies (id, name, admin_email, size, created_at, updated_at)
+-- Insert organization (if not exists)
+INSERT INTO QUAD_organizations (id, name, admin_email, size, created_at, updated_at)
 VALUES (
     'b2c3d4e5-f6a7-8901-bcde-f12345678901'::uuid,
     'A2Vibe Creators',
@@ -83,7 +83,7 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- Insert prepaid credits (50,000 tokens = $400 worth)
-INSERT INTO QUAD_suma_credits (id, company_id, balance_tokens, total_purchased, total_used, lifetime_spend_usd, created_at, updated_at)
+INSERT INTO QUAD_suma_credits (id, org_id, balance_tokens, total_purchased, total_used, lifetime_spend_usd, created_at, updated_at)
 VALUES (
     gen_random_uuid(),
     'b2c3d4e5-f6a7-8901-bcde-f12345678901'::uuid,
@@ -93,11 +93,11 @@ VALUES (
     400.00, -- $400 spent
     NOW(),
     NOW()
-) ON CONFLICT (company_id) DO NOTHING;
+) ON CONFLICT (org_id) DO NOTHING;
 
 -- Insert API key (sk_test_... for sandbox testing)
 INSERT INTO QUAD_suma_api_keys (
-    id, company_id, api_key, api_secret_hash, name, environment,
+    id, org_id, api_key, api_secret_hash, name, environment,
     rate_limit_per_minute, rate_limit_per_day, allowed_domains, is_active, created_at, last_used_at
 ) VALUES (
     gen_random_uuid(),
@@ -118,8 +118,8 @@ INSERT INTO QUAD_suma_api_keys (
 -- 3. TestCorp Ltd (External Mock Customer)
 -- ==============================================================================
 
--- Insert company (if not exists)
-INSERT INTO QUAD_companies (id, name, admin_email, size, created_at, updated_at)
+-- Insert organization (if not exists)
+INSERT INTO QUAD_organizations (id, name, admin_email, size, created_at, updated_at)
 VALUES (
     'c3d4e5f6-a7b8-9012-cdef-123456789012'::uuid,
     'TestCorp Ltd',
@@ -130,7 +130,7 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- Insert prepaid credits (500 tokens = $4 worth - free tier trial)
-INSERT INTO QUAD_suma_credits (id, company_id, balance_tokens, total_purchased, total_used, lifetime_spend_usd, created_at, updated_at)
+INSERT INTO QUAD_suma_credits (id, org_id, balance_tokens, total_purchased, total_used, lifetime_spend_usd, created_at, updated_at)
 VALUES (
     gen_random_uuid(),
     'c3d4e5f6-a7b8-9012-cdef-123456789012'::uuid,
@@ -140,11 +140,11 @@ VALUES (
     0.00,   -- $0 spent (free trial)
     NOW(),
     NOW()
-) ON CONFLICT (company_id) DO NOTHING;
+) ON CONFLICT (org_id) DO NOTHING;
 
 -- Insert API key (sk_test_... for sandbox testing)
 INSERT INTO QUAD_suma_api_keys (
-    id, company_id, api_key, api_secret_hash, name, environment,
+    id, org_id, api_key, api_secret_hash, name, environment,
     rate_limit_per_minute, rate_limit_per_day, allowed_domains, is_active, created_at, last_used_at
 ) VALUES (
     gen_random_uuid(),
@@ -165,11 +165,11 @@ INSERT INTO QUAD_suma_api_keys (
 -- Verification Queries
 -- ==============================================================================
 
--- Show all test companies
+-- Show all test organizations
 SELECT
-    c.name as company,
-    c.admin_email,
-    c.size,
+    o.name as organization,
+    o.admin_email,
+    o.size,
     cr.balance_tokens,
     cr.total_purchased,
     cr.lifetime_spend_usd,
@@ -177,11 +177,11 @@ SELECT
     k.name as api_key_name,
     k.rate_limit_per_minute,
     k.rate_limit_per_day
-FROM QUAD_companies c
-LEFT JOIN QUAD_suma_credits cr ON c.id = cr.company_id
-LEFT JOIN QUAD_suma_api_keys k ON c.id = k.company_id
-WHERE c.name IN ('NutriNine Health', 'A2Vibe Creators', 'TestCorp Ltd')
-ORDER BY c.size DESC;
+FROM QUAD_organizations o
+LEFT JOIN QUAD_suma_credits cr ON o.id = cr.org_id
+LEFT JOIN QUAD_suma_api_keys k ON o.id = k.org_id
+WHERE o.name IN ('NutriNine Health', 'A2Vibe Creators', 'TestCorp Ltd')
+ORDER BY o.size DESC;
 
 /**
  * Usage Instructions:

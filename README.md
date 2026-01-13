@@ -70,10 +70,41 @@ quad-database/
 3. **Anonymize PII** - Never copy raw prod data to dev
 4. **Backup before migrate** - Automatic backup on prod deployments
 
+## PGCE (Priority-Guided Code Evolution)
+
+**Patent:** 63/957,663
+
+PGCE tables power "Close to Zero Hallucination" code generation.
+
+```
+Formula: P = (D × 0.5) + (I × 0.3) + (C' × 0.2)
+```
+
+| Table | Purpose |
+|-------|---------|
+| `QUAD_code_patterns` | Code patterns for pattern-matching generation |
+| `QUAD_pgce_priorities` | Priority calculations and build order |
+
+See: [sql/ai/README.md](sql/ai/README.md) for full documentation.
+
+### Quick Start - PGCE
+
+```bash
+# Seed patterns
+psql -h localhost -p 14201 -U postgres -d quad_dev_db -f seeds/pgce-code-patterns.sql
+
+# Query patterns
+psql -c "SELECT pattern_name, pattern_type FROM QUAD_code_patterns"
+```
+
+---
+
 ## Related
 
 - [quad-services](../quad-services/) - Java Spring Boot (uses JPA with this schema)
 - [quad-web](../quad-web/) - Next.js (calls quad-services API)
+- [quad-api](../quad-api/) - Express API with PGCE endpoints
+- [quad-plugin](../quad-plugin/) - Claude Code commands using PGCE
 
 ## Naming Conventions
 
