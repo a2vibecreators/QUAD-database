@@ -6,7 +6,7 @@
 
 CREATE TABLE IF NOT EXISTS quad_domains (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    company_id          UUID NOT NULL REFERENCES quad_companies(id) ON DELETE CASCADE,
+    org_id              UUID NOT NULL REFERENCES quad_organizations(id) ON DELETE CASCADE,
     name                VARCHAR(255) NOT NULL,
     slug                VARCHAR(255),
     description         VARCHAR(255),
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS quad_domains (
 );
 
 -- Indexes
-CREATE INDEX IF NOT EXISTS idx_quad_domains_company ON quad_domains(company_id);
+CREATE INDEX IF NOT EXISTS idx_quad_domains_org ON quad_domains(org_id);
 CREATE INDEX IF NOT EXISTS idx_quad_domains_slug ON quad_domains(slug);
 CREATE INDEX IF NOT EXISTS idx_quad_domains_name ON quad_domains(name);
 

@@ -6,13 +6,11 @@
 
 CREATE TABLE IF NOT EXISTS quad_users (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    company_id      UUID REFERENCES quad_organizations(id) ON DELETE SET NULL,
+    org_id          UUID REFERENCES quad_organizations(id) ON DELETE SET NULL,
     email           VARCHAR(255) NOT NULL UNIQUE,
     password_hash   VARCHAR(255),
     name            VARCHAR(255),
-    full_name       VARCHAR(255),
     role            VARCHAR(50),
-    org_id          UUID,
     avatar_url      VARCHAR(255),
     department      VARCHAR(255),
     job_title       VARCHAR(255),
@@ -29,7 +27,7 @@ CREATE TABLE IF NOT EXISTS quad_users (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_quad_users_email ON quad_users(email);
-CREATE INDEX IF NOT EXISTS idx_quad_users_company ON quad_users(company_id);
+CREATE INDEX IF NOT EXISTS idx_quad_users_org ON quad_users(org_id);
 CREATE INDEX IF NOT EXISTS idx_quad_users_github ON quad_users(github_username);
 
 -- Comments
